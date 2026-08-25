@@ -6,10 +6,10 @@ package com.linkedin.kafka.cruisecontrol.servlet.security;
 
 import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
 import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
-import org.eclipse.jetty.security.Authenticator;
+import org.eclipse.jetty.ee8.security.Authenticator;
+import org.eclipse.jetty.ee8.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.security.LoginService;
-import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 
 /**
  * This class defines a HTTP Basic authenticator with a file based {@link HashLoginService} and uses the default
@@ -27,7 +27,7 @@ public class BasicSecurityProvider extends DefaultRoleSecurityProvider {
 
   @Override
   public LoginService loginService() {
-    return new HashLoginService("DefaultLoginService", _userCredentialsFile);
+    return new HashLoginService("DefaultLoginService", UserStoreIdentities.resourceFromPath(_userCredentialsFile));
   }
 
   @Override

@@ -9,21 +9,21 @@ import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
 import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
 import org.apache.http.auth.BasicUserPrincipal;
 import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.security.Authenticator;
-import org.eclipse.jetty.security.ConstraintMapping;
+import org.eclipse.jetty.ee8.nested.ServletConstraint;
+import org.eclipse.jetty.ee8.security.Authenticator;
+import org.eclipse.jetty.ee8.security.ConstraintMapping;
+import org.eclipse.jetty.ee8.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.security.DefaultIdentityService;
-import org.eclipse.jetty.security.DefaultUserIdentity;
 import org.eclipse.jetty.security.IdentityService;
 import org.eclipse.jetty.security.LoginService;
-import org.eclipse.jetty.security.authentication.BasicAuthenticator;
-import org.eclipse.jetty.server.UserIdentity;
-import org.eclipse.jetty.util.security.Constraint;
+import org.eclipse.jetty.security.UserIdentity;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Session;
 import org.eclipse.jetty.util.security.Credential;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import javax.security.auth.Subject;
-import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static com.linkedin.kafka.cruisecontrol.servlet.CruiseControlEndPoint.STATE;
 import static org.junit.Assert.assertEquals;
@@ -93,9 +94,9 @@ public class AuthenticationIntegrationTest extends CruiseControlIntegrationTestH
     @Override
     public List<ConstraintMapping> constraintMappings() {
       ConstraintMapping mapping = new ConstraintMapping();
-      Constraint constraint = new Constraint();
+      ServletConstraint constraint = new ServletConstraint();
       constraint.setAuthenticate(true);
-      constraint.setName(Constraint.__BASIC_AUTH);
+      constraint.setName(Authenticator.BASIC_AUTH);
       constraint.setRoles(new String[] { ADMIN_ROLE });
       mapping.setConstraint(constraint);
       mapping.setPathSpec(ANY_PATH);
@@ -120,13 +121,13 @@ public class AuthenticationIntegrationTest extends CruiseControlIntegrationTestH
 
     private static class ConstantLoginService implements LoginService {
 
-      private static final UserIdentity USER_IDENTITY = new DefaultUserIdentity(
+      private static final UserIdentity USER_IDENTITY = UserIdentity.from(
           new Subject(true,
               Collections.singleton(new BasicUserPrincipal(TEST_USER)),
               Collections.emptySet(),
               Collections.singleton(Credential.getCredential(TEST_PASSWORD))),
           new BasicUserPrincipal(TEST_USER),
-          new String[] { ADMIN_ROLE });
+          ADMIN_ROLE);
 
       private IdentityService _identityService = new DefaultIdentityService();
 
@@ -136,7 +137,7 @@ public class AuthenticationIntegrationTest extends CruiseControlIntegrationTestH
       }
 
       @Override
-      public UserIdentity login(String username, Object credentials, ServletRequest request) {
+      public UserIdentity login(String username, Object credentials, Request request, Function<Boolean, Session> getSession) {
         return TEST_USER.equals(username) && TEST_PASSWORD.equals(credentials) ? USER_IDENTITY : null;
       }
 

@@ -4,15 +4,10 @@
 
 package com.linkedin.kafka.cruisecontrol.servlet.security.trustedproxy;
 
-import org.eclipse.jetty.server.UserIdentity;
+import org.eclipse.jetty.security.UserIdentity;
 import org.junit.Test;
-import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.mock;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -25,16 +20,11 @@ public class TrustedProxyAuthorizationServiceTest {
   @Test
   public void testSuccessfulLoginWithIpFiltering() throws Exception {
     TrustedProxyAuthorizationService srv = new TrustedProxyAuthorizationService(Collections.singletonList(AUTH_SERVICE_NAME), IP_FILTER);
-    HttpServletRequest mockRequest = mock(HttpServletRequest.class);
-
-    expect(mockRequest.getRemoteAddr()).andReturn("192.168.0.1");
-    replay(mockRequest);
     srv.start();
     try {
-      UserIdentity result = srv.getUserIdentity(mockRequest, AUTH_SERVICE_NAME);
+      UserIdentity result = srv.getUserIdentity("192.168.0.1", AUTH_SERVICE_NAME);
       assertNotNull(result);
       assertEquals(AUTH_SERVICE_NAME, result.getUserPrincipal().getName());
-      verify(mockRequest);
     } finally {
       srv.stop();
     }
@@ -43,15 +33,10 @@ public class TrustedProxyAuthorizationServiceTest {
   @Test
   public void testUnsuccessfulLoginWithIpFiltering() throws Exception {
     TrustedProxyAuthorizationService srv = new TrustedProxyAuthorizationService(Collections.singletonList(AUTH_SERVICE_NAME), IP_FILTER);
-    HttpServletRequest mockRequest = mock(HttpServletRequest.class);
-
-    expect(mockRequest.getRemoteAddr()).andReturn("192.167.0.1");
-    replay(mockRequest);
     srv.start();
     try {
-      UserIdentity result = srv.getUserIdentity(mockRequest, AUTH_SERVICE_NAME);
+      UserIdentity result = srv.getUserIdentity("192.167.0.1", AUTH_SERVICE_NAME);
       assertNull(result);
-      verify(mockRequest);
     } finally {
       srv.stop();
     }
@@ -60,14 +45,22 @@ public class TrustedProxyAuthorizationServiceTest {
   @Test
   public void testSuccessfulLoginWithoutIpFiltering() throws Exception {
     TrustedProxyAuthorizationService srv = new TrustedProxyAuthorizationService(Collections.singletonList(AUTH_SERVICE_NAME), null);
-    HttpServletRequest mockRequest = mock(HttpServletRequest.class);
-    replay(mockRequest);
     srv.start();
     try {
-      UserIdentity result = srv.getUserIdentity(mockRequest, AUTH_SERVICE_NAME);
+      UserIdentity result = srv.getUserIdentity(null, AUTH_SERVICE_NAME);
       assertNotNull(result);
       assertEquals(AUTH_SERVICE_NAME, result.getUserPrincipal().getName());
-      verify(mockRequest);
+    } finally {
+      srv.stop();
+    }
+  }
+
+  @Test
+  public void testUnknownService() throws Exception {
+    TrustedProxyAuthorizationService srv = new TrustedProxyAuthorizationService(Collections.singletonList(AUTH_SERVICE_NAME), null);
+    srv.start();
+    try {
+      assertNull(srv.getUserIdentity(null, "other-service"));
     } finally {
       srv.stop();
     }

@@ -5,8 +5,8 @@
 package com.linkedin.kafka.cruisecontrol.servlet.security;
 
 import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
-import org.eclipse.jetty.security.Authenticator;
-import org.eclipse.jetty.security.ConstraintMapping;
+import org.eclipse.jetty.ee8.security.Authenticator;
+import org.eclipse.jetty.ee8.security.ConstraintMapping;
 import org.eclipse.jetty.security.LoginService;
 import javax.servlet.ServletException;
 import java.util.List;
@@ -35,7 +35,7 @@ public interface SecurityProvider {
   List<ConstraintMapping> constraintMappings();
 
   /**
-   * Associates a username, credentials and roles with a {@link org.eclipse.jetty.server.UserIdentity}
+   * Associates a username, credentials and roles with a {@link org.eclipse.jetty.security.UserIdentity}
    * that will be used by Jetty to manage the authentication.
    *
    * @return a new {@link LoginService}.

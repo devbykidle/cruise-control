@@ -4,18 +4,18 @@
 
 package com.linkedin.kafka.cruisecontrol.servlet;
 
-import java.util.Map;
-import java.util.Set;
+import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
+import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
+import com.linkedin.kafka.cruisecontrol.servlet.security.CruiseControlPropertyUserStore;
+import com.linkedin.kafka.cruisecontrol.servlet.security.UserStoreIdentities;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Collections;
-import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
+import org.eclipse.jetty.security.RolePrincipal;
 import org.eclipse.jetty.security.UserStore;
-import org.eclipse.jetty.security.PropertyUserStore;
-import org.eclipse.jetty.security.AbstractLoginService;
-import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
-import javax.security.auth.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,23 +39,20 @@ public class UserPermissionsManager {
      * @return a map of usernames -> their assigned roles
      */
     private Map<String, Set<String>> createRolesPerUsersMap() {
-        Map<String, Set<String>> rolesPerUsers = new HashMap();
+        Map<String, Set<String>> rolesPerUsers = new HashMap<>();
         boolean securityEnabled = _config.getBoolean(WebServerConfig.WEBSERVER_SECURITY_ENABLE_CONFIG);
         if (securityEnabled) {
             String privilegedFilePath = _config.getString(WebServerConfig.WEBSERVER_AUTH_CREDENTIALS_FILE_CONFIG);
             UserStore userStore = createUserStoreFromFile(privilegedFilePath);
             startUserStore(userStore);
 
-            Set<String> userNames = userStore.getKnownUserIdentities().keySet();
+            Set<String> userNames = UserStoreIdentities.knownUserNames(userStore);
 
             for (String user : userNames) {
-                Subject userSubject = userStore.getUserIdentity(user).getSubject();
-                Set<AbstractLoginService.RolePrincipal> roles = userSubject == null
+                Set<String> roleNames = userStore.getRolePrincipals(user) == null
                         ? new HashSet<>()
-                        : userSubject.getPrincipals(AbstractLoginService.RolePrincipal.class);
-
-                Set<String> roleNames = roles.stream()
-                        .map(AbstractLoginService.RolePrincipal::getName)
+                        : userStore.getRolePrincipals(user).stream()
+                        .map(RolePrincipal::getName)
                         .map(String::toUpperCase)
                         .collect(Collectors.toSet());
                 rolesPerUsers.put(user, roleNames);
@@ -98,8 +95,8 @@ public class UserPermissionsManager {
      * @return a UserStore object
      */
     private UserStore createUserStoreFromFile(String privilegedFilePath) {
-        PropertyUserStore userStore = new PropertyUserStore();
-        userStore.setConfig(privilegedFilePath);
+        CruiseControlPropertyUserStore userStore = new CruiseControlPropertyUserStore();
+        userStore.setConfig(UserStoreIdentities.resourceFromPath(privilegedFilePath));
         return userStore;
     }
 }

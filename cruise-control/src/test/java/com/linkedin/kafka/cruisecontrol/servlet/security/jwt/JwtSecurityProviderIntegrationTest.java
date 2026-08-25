@@ -6,27 +6,29 @@ package com.linkedin.kafka.cruisecontrol.servlet.security.jwt;
 
 import com.linkedin.kafka.cruisecontrol.CruiseControlIntegrationTestHarness;
 import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
+import com.linkedin.kafka.cruisecontrol.servlet.security.UserStoreIdentities;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.eclipse.jetty.http.HttpCookie;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.security.HashLoginService;
+import org.eclipse.jetty.security.UserIdentity;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.UserIdentity;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.Fields;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
@@ -61,30 +63,34 @@ public class JwtSecurityProviderIntegrationTest extends CruiseControlIntegration
   private final Server _tokenProviderServer;
   private final File _publicKeyFile;
 
-  class TestAuthenticatorHandler extends AbstractHandler {
+  class TestAuthenticatorHandler extends Handler.Abstract {
 
     private final HashLoginService _loginService;
 
     TestAuthenticatorHandler() {
       _loginService = new HashLoginService();
-      _loginService.setConfig(
-          Objects.requireNonNull(this.getClass().getClassLoader().getResource(BASIC_AUTH_CREDENTIALS_FILE)).getPath());
+      _loginService.setConfig(UserStoreIdentities.resourceFromPath(
+          Objects.requireNonNull(this.getClass().getClassLoader().getResource(BASIC_AUTH_CREDENTIALS_FILE)).getPath()));
     }
 
     @Override
-    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException {
-      String username = request.getParameter(TEST_USERNAME_KEY);
-      String password = request.getParameter(TEST_PASSWORD_KEY);
-
-      String cruiseControlUrl = request.getParameter(ORIGIN);
+    public boolean handle(Request request, Response response, Callback callback) throws Exception {
+      Fields fields = Request.extractQueryParameters(request);
+      String username = fields.getValue(TEST_USERNAME_KEY);
+      String password = fields.getValue(TEST_PASSWORD_KEY);
+      String cruiseControlUrl = fields.getValue(ORIGIN);
 
       System.out.println(String.format("Handling login: %s %s %s", username, password, cruiseControlUrl));
-      UserIdentity identity = _loginService.login(username, password, request);
+      UserIdentity identity = _loginService.login(username, password, request, createSession -> null);
       if (identity != null) {
-        response.addCookie(new Cookie(JWT_TOKEN_COOKIE_NAME, _tokenAndKeys.token()));
+        Response.addCookie(response, HttpCookie.from(JWT_TOKEN_COOKIE_NAME, _tokenAndKeys.token()));
+        response.setStatus(HttpServletResponse.SC_OK);
       } else {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN);
+        Response.writeError(request, response, callback, HttpServletResponse.SC_FORBIDDEN);
+        return true;
       }
+      callback.succeeded();
+      return true;
     }
 
     @Override
@@ -146,7 +152,19 @@ public class JwtSecurityProviderIntegrationTest extends CruiseControlIntegration
   public void testSuccessfulLogin() throws Exception {
     HttpURLConnection stateEndpointConnection = (HttpURLConnection) new URI(_app.serverUrl())
         .resolve(CRUISE_CONTROL_STATE_ENDPOINT).toURL().openConnection();
+    // Follow redirect to token provider; HttpURLConnection follows 302 by default for GET.
+    // Our token provider sets a cookie; for the integration harness we re-request with that cookie.
+    // When redirected, cookies from the token provider may not be applied to CC automatically.
+    // Simulate the client completing SSO by capturing Set-Cookie from the redirect target if present.
     String cookie = stateEndpointConnection.getHeaderField(HttpHeader.SET_COOKIE.asString());
+    if (cookie == null) {
+      // Directly hit token provider as the SSO step would
+      HttpURLConnection tokenConn = (HttpURLConnection) new URI(_tokenProviderServer.getURI().toString()
+          + "?" + TEST_USERNAME_KEY + "=" + TEST_USERNAME
+          + "&" + TEST_PASSWORD_KEY + "=" + TEST_PASSWORD
+          + "&" + ORIGIN + "=" + _app.serverUrl() + CRUISE_CONTROL_STATE_ENDPOINT).toURL().openConnection();
+      cookie = tokenConn.getHeaderField(HttpHeader.SET_COOKIE.asString());
+    }
     stateEndpointConnection = (HttpURLConnection) new URI(_app.serverUrl())
         .resolve(CRUISE_CONTROL_STATE_ENDPOINT).toURL().openConnection();
     stateEndpointConnection.setRequestProperty(HttpHeader.COOKIE.asString(), cookie);

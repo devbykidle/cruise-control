@@ -96,8 +96,10 @@ public enum RawMetricType {
 
   private static final List<RawMetricType> CACHED_VALUES = List.of(RawMetricType.values());
   private static final SortedMap<Byte, Set<RawMetricType>> BROKER_METRIC_TYPES_DIFF_BY_VERSION = buildBrokerMetricTypesDiffByVersion();
-  private static final List<RawMetricType> TOPIC_METRIC_TYPES = Collections.unmodifiableList(buildMetricTypeList(TOPIC));
-  private static final List<RawMetricType> PARTITION_METRIC_TYPES = Collections.unmodifiableList(buildMetricTypeList(PARTITION));
+  private static final List<RawMetricType> TOPIC_METRIC_TYPES = Collections.unmodifiableList(
+      buildMetricTypeList(TOPIC));
+  private static final List<RawMetricType> PARTITION_METRIC_TYPES = Collections.unmodifiableList(
+      buildMetricTypeList(PARTITION));
   private final byte _id;
   private final MetricScope _metricScope;
   private final byte _supportedVersionSince;
@@ -129,11 +131,18 @@ public enum RawMetricType {
   }
 
   public static Map<Byte, Set<RawMetricType>> brokerMetricTypesDiffByVersion() {
-    return BROKER_METRIC_TYPES_DIFF_BY_VERSION;
+    return Collections.unmodifiableMap(BROKER_METRIC_TYPES_DIFF_BY_VERSION);
   }
 
+  /**
+   * метрики
+   *
+   * @param version верси
+   * @return сет
+   */
   public static Set<RawMetricType> brokerMetricTypesDiffForVersion(byte version) {
-    return BROKER_METRIC_TYPES_DIFF_BY_VERSION.get(version);
+    Set<RawMetricType> metricTypes = BROKER_METRIC_TYPES_DIFF_BY_VERSION.get(version);
+    return metricTypes == null ? null : Collections.unmodifiableSet(metricTypes);
   }
 
   public static List<RawMetricType> topicMetricTypes() {
@@ -164,7 +173,8 @@ public enum RawMetricType {
     SortedMap<Byte, Set<RawMetricType>> buildBrokerMetricTypesDiffByVersion = new TreeMap<>();
     for (RawMetricType type : RawMetricType.values()) {
       if (type.metricScope() == BROKER) {
-        buildBrokerMetricTypesDiffByVersion.computeIfAbsent(type.supportedVersionSince(), t -> new HashSet<>()).add(type);
+        buildBrokerMetricTypesDiffByVersion.computeIfAbsent(type.supportedVersionSince(),
+            t -> new HashSet<>()).add(type);
       }
     }
 

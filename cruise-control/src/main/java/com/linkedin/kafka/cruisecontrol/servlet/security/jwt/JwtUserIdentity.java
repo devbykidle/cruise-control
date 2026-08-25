@@ -4,9 +4,9 @@
 
 package com.linkedin.kafka.cruisecontrol.servlet.security.jwt;
 
-import org.eclipse.jetty.server.UserIdentity;
-import javax.security.auth.Subject;
 import java.security.Principal;
+import javax.security.auth.Subject;
+import org.eclipse.jetty.security.UserIdentity;
 
 public class JwtUserIdentity implements UserIdentity {
 
@@ -31,7 +31,8 @@ public class JwtUserIdentity implements UserIdentity {
   }
 
   @Override
-  public boolean isUserInRole(String role, Scope scope) {
-    return _roleDelegate != null && _roleDelegate.isUserInRole(role, scope);
+  public boolean isUserInRole(String role) {
+    // Scope from Jetty 9.4 was unused by Cruise Control role delegates; check roles only.
+    return _roleDelegate != null && _roleDelegate.isUserInRole(role);
   }
 }

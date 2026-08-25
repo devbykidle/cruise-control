@@ -4,19 +4,16 @@
 
 package com.linkedin.kafka.cruisecontrol.servlet.security;
 
-import org.eclipse.jetty.security.PropertyUserStore;
+import org.eclipse.jetty.security.UserIdentity;
 import org.eclipse.jetty.security.UserStore;
-import org.eclipse.jetty.security.authentication.AuthorizationService;
-import org.eclipse.jetty.server.UserIdentity;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * Can be used for authorization scenarios where a file can be created in a secure location with a relatively
  * low number of users. It follows the <code>username: password [,rolename ...]</code> format which corresponds to
  * the format used with {@link org.eclipse.jetty.security.HashLoginService}.
  */
-public class UserStoreAuthorizationService extends AbstractLifeCycle implements AuthorizationService {
+public class UserStoreAuthorizationService extends AbstractLifeCycle implements CruiseControlAuthorizationService {
 
   private final UserStore _userStore;
 
@@ -29,8 +26,8 @@ public class UserStoreAuthorizationService extends AbstractLifeCycle implements 
   }
 
   @Override
-  public UserIdentity getUserIdentity(HttpServletRequest request, String name) {
-    return _userStore.getUserIdentity(name);
+  public UserIdentity getUserIdentity(String remoteAddr, String name) {
+    return UserStoreIdentities.getUserIdentity(_userStore, name);
   }
 
   @Override
@@ -46,8 +43,8 @@ public class UserStoreAuthorizationService extends AbstractLifeCycle implements 
   }
 
   private static UserStore userStoreFromFile(String privilegesFilePath) {
-    PropertyUserStore userStore = new PropertyUserStore();
-    userStore.setConfig(privilegesFilePath);
+    CruiseControlPropertyUserStore userStore = new CruiseControlPropertyUserStore();
+    userStore.setConfig(UserStoreIdentities.resourceFromPath(privilegesFilePath));
     return userStore;
   }
 }

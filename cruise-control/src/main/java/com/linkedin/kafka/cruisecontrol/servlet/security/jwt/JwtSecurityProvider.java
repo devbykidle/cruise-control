@@ -6,15 +6,15 @@ package com.linkedin.kafka.cruisecontrol.servlet.security.jwt;
 
 import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
 import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
+import com.linkedin.kafka.cruisecontrol.servlet.security.CruiseControlAuthorizationService;
 import com.linkedin.kafka.cruisecontrol.servlet.security.DefaultRoleSecurityProvider;
 import com.linkedin.kafka.cruisecontrol.servlet.security.UserStoreAuthorizationService;
-import org.eclipse.jetty.security.Authenticator;
-import org.eclipse.jetty.security.LoginService;
-import org.eclipse.jetty.security.authentication.AuthorizationService;
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.util.List;
+import javax.servlet.ServletException;
+import org.eclipse.jetty.ee8.security.Authenticator;
+import org.eclipse.jetty.security.LoginService;
 
 /**
  * A security provider implementation for JWT based authentication. It has to be configured with
@@ -60,7 +60,7 @@ public class JwtSecurityProvider extends DefaultRoleSecurityProvider {
     return new JwtAuthenticator(_authenticationProviderUrl, _cookieName);
   }
 
-  public AuthorizationService authorizationService() {
+  public CruiseControlAuthorizationService authorizationService() {
     return new UserStoreAuthorizationService(_privilegesFilePath);
   }
 }

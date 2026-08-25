@@ -6,14 +6,14 @@ package com.linkedin.kafka.cruisecontrol.servlet.security.spnego;
 
 import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
 import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
+import com.linkedin.kafka.cruisecontrol.servlet.security.CruiseControlAuthorizationService;
 import com.linkedin.kafka.cruisecontrol.servlet.security.DefaultRoleSecurityProvider;
-import org.apache.kafka.common.security.kerberos.KerberosName;
-import org.eclipse.jetty.security.Authenticator;
-import org.eclipse.jetty.security.LoginService;
-import org.eclipse.jetty.security.authentication.AuthorizationService;
-import org.eclipse.jetty.security.authentication.ConfigurableSpnegoAuthenticator;
 import java.nio.file.Paths;
 import java.util.List;
+import org.apache.kafka.common.security.kerberos.KerberosName;
+import org.eclipse.jetty.ee8.security.Authenticator;
+import org.eclipse.jetty.ee8.security.authentication.ConfigurableSpnegoAuthenticator;
+import org.eclipse.jetty.security.LoginService;
 
 /**
  * Defines an SPNEGO capable login service using the HTTP Negotiate authentication mechanism.
@@ -49,7 +49,7 @@ public class SpnegoSecurityProvider extends DefaultRoleSecurityProvider {
     return new ConfigurableSpnegoAuthenticator();
   }
 
-  public AuthorizationService authorizationService() {
+  public CruiseControlAuthorizationService authorizationService() {
     return new SpnegoUserStoreAuthorizationService(_privilegesFilePath);
   }
 }

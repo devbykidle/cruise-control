@@ -5,14 +5,14 @@
 package com.linkedin.kafka.cruisecontrol.servlet.security.jwt;
 
 import com.nimbusds.jwt.SignedJWT;
+import org.eclipse.jetty.ee8.nested.Authentication;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
-import org.eclipse.jetty.security.ServerAuthException;
-import org.eclipse.jetty.security.UserAuthentication;
-import org.eclipse.jetty.security.authentication.LoginAuthenticator;
-import org.eclipse.jetty.server.Authentication;
-import org.eclipse.jetty.server.UserIdentity;
+import org.eclipse.jetty.ee8.security.ServerAuthException;
+import org.eclipse.jetty.ee8.security.UserAuthentication;
+import org.eclipse.jetty.ee8.security.authentication.LoginAuthenticator;
+import org.eclipse.jetty.security.UserIdentity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javax.servlet.ServletRequest;

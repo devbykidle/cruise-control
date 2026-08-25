@@ -7,13 +7,13 @@ package com.linkedin.kafka.cruisecontrol.servlet.security.trustedproxy;
 import com.linkedin.kafka.cruisecontrol.config.KafkaCruiseControlConfig;
 import com.linkedin.kafka.cruisecontrol.config.constants.WebServerConfig;
 import com.linkedin.kafka.cruisecontrol.servlet.security.spnego.SpnegoSecurityProvider;
-import org.eclipse.jetty.security.Authenticator;
-import org.eclipse.jetty.security.LoginService;
-import org.eclipse.jetty.security.authentication.ConfigurableSpnegoAuthenticator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.nio.file.Paths;
 import java.util.List;
+import org.eclipse.jetty.ee8.security.Authenticator;
+import org.eclipse.jetty.ee8.security.authentication.ConfigurableSpnegoAuthenticator;
+import org.eclipse.jetty.security.LoginService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * In trusted proxy authentication Cruise Control has a fronting proxy which authenticates clients and from which

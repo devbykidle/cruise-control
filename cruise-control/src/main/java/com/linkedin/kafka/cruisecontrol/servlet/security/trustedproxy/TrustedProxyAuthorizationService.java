@@ -4,21 +4,21 @@
 
 package com.linkedin.kafka.cruisecontrol.servlet.security.trustedproxy;
 
+import com.linkedin.kafka.cruisecontrol.servlet.security.CruiseControlAuthorizationService;
 import com.linkedin.kafka.cruisecontrol.servlet.security.DefaultRoleSecurityProvider;
 import com.linkedin.kafka.cruisecontrol.servlet.security.SecurityUtils;
-import org.eclipse.jetty.security.UserStore;
-import org.eclipse.jetty.security.authentication.AuthorizationService;
-import org.eclipse.jetty.server.UserIdentity;
-import org.eclipse.jetty.util.component.AbstractLifeCycle;
-import javax.servlet.http.HttpServletRequest;
+import com.linkedin.kafka.cruisecontrol.servlet.security.UserStoreIdentities;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.eclipse.jetty.security.UserIdentity;
+import org.eclipse.jetty.security.UserStore;
+import org.eclipse.jetty.util.component.AbstractLifeCycle;
 
 /**
  * This authorization service simply checks the incoming user against a list of configured service names maintained in
  * a {@link UserStore} and if specified, the remote IP address against a configured pattern.
  */
-public class TrustedProxyAuthorizationService extends AbstractLifeCycle implements AuthorizationService {
+public class TrustedProxyAuthorizationService extends AbstractLifeCycle implements CruiseControlAuthorizationService {
 
   private final UserStore _serviceUserStore;
   private final Pattern _trustedProxyIpPattern;
@@ -34,13 +34,16 @@ public class TrustedProxyAuthorizationService extends AbstractLifeCycle implemen
   }
 
   @Override
-  public UserIdentity getUserIdentity(HttpServletRequest request, String name) {
-    // ConfigurableSpnegoAuthenticator may pass names in servicename/host format but we only store the servicename
+  public UserIdentity getUserIdentity(String remoteAddr, String name) {
+    // SPNEGO may pass names in servicename/host format but we only store the servicename
     int nameHostSeparatorIndex = name.indexOf('/');
     String serviceName = nameHostSeparatorIndex > 0 ? name.substring(0, nameHostSeparatorIndex) : name;
-    UserIdentity serviceIdentity = _serviceUserStore.getUserIdentity(serviceName);
+    UserIdentity serviceIdentity = UserStoreIdentities.getUserIdentity(_serviceUserStore, serviceName);
     if (_trustedProxyIpPattern != null) {
-      return _trustedProxyIpPattern.matcher(request.getRemoteAddr()).matches() ? serviceIdentity : null;
+      if (remoteAddr == null || !_trustedProxyIpPattern.matcher(remoteAddr).matches()) {
+        return null;
+      }
+      return serviceIdentity;
     } else {
       return serviceIdentity;
     }
